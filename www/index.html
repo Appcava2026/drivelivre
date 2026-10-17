@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>Drive Livre</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--bg:#14161a;--card:#1f2228;--line:#2d313a;--fg:#f2f3f5;--mut:#9aa1ad;--ac:#2a7de1;--hi:#ffb020;--ok:#3ccf7a;--bad:#ff5d52;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);padding-top:env(safe-area-inset-top)}
+button{font:inherit;color:#fff;background:var(--ac);border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+button.sec{background:var(--line)}
+button.bad{background:#5a2824}
+#pin{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20}
+#pin input{font-size:28px;width:170px;text-align:center;letter-spacing:8px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 10px 6px;border-bottom:1px solid var(--line)}
+#cfg{width:100%;background:var(--hi);color:#1b1300;font-weight:700;padding:14px;font-size:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px}
+#cfg small{font-weight:600;opacity:.75;font-size:15px}
+.r2{display:flex;justify-content:space-between;align-items:center;padding-top:10px}
+#grid{display:grid;gap:2px;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+.it{position:relative;aspect-ratio:1;background:var(--card);overflow:hidden}
+.it img,.it video{width:100%;height:100%;object-fit:cover}
+.dur{position:absolute;left:4px;bottom:4px;background:#000a;border-radius:6px;padding:1px 6px;font-size:12px}
+.doc{display:flex;align-items:center;justify-content:center;height:100%;font-weight:700;color:var(--mut)}
+.vazio{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--mut);line-height:1.5}
+#alca{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:6;width:22px;height:84px;padding:0;border-radius:0 12px 12px 0;background:var(--hi);color:#1b1300;font-size:20px;font-weight:700;opacity:.9}
+#fundo{position:fixed;inset:0;background:#0008;z-index:8;display:none}
+#fundo.on{display:block}
+nav{position:fixed;top:0;bottom:0;left:0;width:min(78vw,280px);background:var(--card);z-index:9;transform:translateX(-100%);transition:transform .2s;padding:calc(16px + env(safe-area-inset-top)) 10px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:4px 0 20px #0008}
+nav.on{transform:none}
+.mt{color:var(--mut);font-size:13px;padding:6px 10px 10px}
+nav button{display:flex;justify-content:space-between;align-items:center;background:none;color:var(--fg);text-align:left;padding:14px 12px;border-radius:10px;font-size:16px}
+nav button small{color:var(--mut);font-size:14px}
+nav button.on{background:var(--line);color:#6db1ff}
+#vis{position:fixed;inset:0;background:#000;z-index:12;display:none;flex-direction:column}
+#vis.on{display:flex}
+.vtop,.vac{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px}
+.vtop{padding-top:calc(10px + env(safe-area-inset-top));word-break:break-all}
+.vac{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+#vm{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#vm img,#vm video{max-width:100%;max-height:100%}
+.lnk{color:#6db1ff;padding:24px;text-align:center;word-break:break-all}
+.vac select{background:var(--line);color:#fff;border:0;border-radius:10px;padding:10px;font:inherit}
+.it{cursor:pointer}
+@media(prefers-reduced-motion:reduce){nav{transition:none}}
+#painel{position:fixed;inset:0;background:#000c;z-index:10;display:none;align-items:flex-end;justify-content:center}
+#painel.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+#res{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;line-height:1.5}
+.conta{background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px}
+.em{font-weight:600;word-break:break-all}
+.bar{height:8px;background:var(--line);border-radius:4px;margin:8px 0;overflow:hidden}
+.bar i{display:block;height:100%}
+.sub{color:var(--mut);font-size:13px}
+.acoes{display:flex;gap:8px;margin-top:10px}
+.full{width:100%;margin-top:6px}
+.nota{color:var(--mut);font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="pin">
+  <div id="msg"></div>
+  <input id="p" type="password" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="PIN">
+  <button onclick="entrar()">Entrar</button>
+</div>
+
+<header>
+  <button id="cfg" onclick="abrir()">⚙️ Configurar e-mail de armazenamento <small id="cnt"></small></button>
+  <div class="r2">
+    <b id="tit"></b>
+    <span>
+      <button class="sec" onclick="zoom(-1)" aria-label="Diminuir miniaturas">−</button>
+      <button class="sec" onclick="zoom(1)" aria-label="Aumentar miniaturas">＋</button>
+      <button onclick="$('f').click()" aria-label="Escolher arquivos">📂</button>
+    </span>
+  </div>
+</header>
+<input id="f" type="file" multiple hidden onchange="add(this.files)">
+<div id="grid"></div>
+<button id="alca" onclick="menu(true)" aria-label="Abrir menu de categorias">›</button>
+<div id="fundo" onclick="menu(false)"></div>
+<nav id="nav" aria-label="Categorias"></nav>
+
+<div id="vis">
+  <div class="vtop"><b id="vn"></b><button class="sec" onclick="vfechar()" aria-label="Fechar">✕</button></div>
+  <div id="vm"></div>
+  <div class="vac"><button class="sec" id="bimp" onclick="vimp()"></button><select id="bcat" onchange="vmover(this.value)" aria-label="Categoria"></select><button class="bad" onclick="vdel()">Excluir do app</button></div>
+</div>
+<div id="painel">
+  <div class="sheet">
+    <div class="top"><b>Contas de armazenamento</b><button class="sec" onclick="fechar()" aria-label="Fechar">✕</button></div>
+    <div id="res"></div>
+    <div id="lista"></div>
+    <button id="add" class="full" onclick="conectar()">＋ Adicionar conta Google</button>
+    <p class="nota" id="app"></p>
+    <p class="nota">O Google avisa "app não verificado" na primeira vez: toque em Avançado e depois em Acessar Drive Livre. Toque em Atualizar para ver o espaço atual de cada conta. O navegador não informa a memória total do celular.</p>
+  </div>
+</div>
+
+<script>
+var CLIENT_ID='789014542200-cpr5ca5vk86921g2l2j2l0r34gqpg7h2.apps.googleusercontent.com';
+var SCOPE='https://www.googleapis.com/auth/drive.file',MAX=10;
+var $=function(i){return document.getElementById(i)};
+var L={g:function(k){try{return localStorage.getItem(k)}catch(e){return null}},s:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+var contas=[];try{contas=JSON.parse(L.g('dl_contas')||'[]')}catch(e){}
+var tokens={},cli=null;
+var cats=['Documentos','Fotos','Vídeos','Importantes'],cat='Fotos',cols=[3,5,9],z=1,dados=[];
+
+/* ---------- PIN ---------- */
+$('msg').textContent=L.g('dl_pin')?'Digite seu PIN':'Crie um PIN de 4 a 6 números';
+$('p').onkeydown=function(e){if(e.key==='Enter')entrar()};
+async function h(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}
+async function entrar(){
+  var v=$('p').value;if(v.length<4)return;
+  var s=L.g('dl_pin'),x=await h(v);
+  if(!s){L.s('dl_pin',x)}else if(s!==x){$('msg').textContent='PIN incorreto. Tente de novo.';$('p').value='';return}
+  $('pin').style.display='none';await carregar();contagem();
+}
+
+/* ---------- Utilidades ---------- */
+function fmt(b){var g=1073741824;if(b>=g)return(b/g).toFixed(1)+' GB';if(b>=1048576)return Math.round(b/1048576)+' MB';return Math.round(b/1024)+' KB'}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function contagem(){$('cnt').textContent='('+contas.length+'/'+MAX+')'}
+
+/* ---------- Contas Google ---------- */
+function gcli(){
+  if(cli)return cli;
+  if(!window.google||!google.accounts||!google.accounts.oauth2)return null;
+  cli=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,callback:resp,
+    error_callback:function(e){if(e&&e.type!=='popup_closed')alert('Não foi possível abrir o login do Google ('+(e.type||'erro')+'). Libere pop-ups para este site.')}});
+  return cli;
+}
+function conectar(email){
+  var c=gcli();
+  if(!c){alert('O login do Google ainda está carregando. Tente de novo em instantes.');return}
+  c.requestAccessToken(email?{login_hint:email,prompt:''}:{prompt:'select_account'});
+}
+async function resp(r){
+  if(r.error){alert('Não foi possível conectar: '+r.error);return}
+  try{
+    var res=await fetch('https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress),storageQuota(limit,usage)',{headers:{Authorization:'Bearer '+r.access_token}});
+    var j=await res.json();
+    if(!j.user)throw new Error(j.error&&j.error.message||'resposta inválida');
+    var em=j.user.emailAddress.toLowerCase(),q=j.storageQuota||{};
+    var c={email:em,nome:j.user.displayName,uso:+q.usage||0,lim:q.limit?+q.limit:0};
+    var i=contas.findIndex(function(x){return x.email===em});
+    if(i>=0){contas[i]=c}else{if(contas.length>=MAX){alert('Limite de '+MAX+' contas atingido.');return}contas.push(c)}
+    tokens[em]=r.access_token;
+    L.s('dl_contas',JSON.stringify(contas));painel();contagem();
+  }catch(e){alert('Não foi possível ler o espaço do Drive: '+e.message)}
+}
+function remover(i){
+  var c=contas[i];if(!confirm('Remover '+c.email+' do Drive Livre? Os arquivos dessa conta continuam no Google Drive.'))return;
+  try{if(tokens[c.email])google.accounts.oauth2.revoke(tokens[c.email])}catch(e){}
+  delete tokens[c.email];contas.splice(i,1);L.s('dl_contas',JSON.stringify(contas));painel();contagem();
+}
+function painel(){
+  var t=0,u=0,ilim=false;
+  contas.forEach(function(c){u+=c.uso;if(c.lim)t+=c.lim;else ilim=true});
+  $('res').innerHTML=contas.length?('<b>'+contas.length+' de '+MAX+' contas</b><br>Total '+(ilim?'ilimitado':fmt(t))+' · Usado '+fmt(u)+(ilim?'':' · Livre '+fmt(t-u))):'Nenhuma conta conectada ainda. Adicione a primeira abaixo.';
+  var l=$('lista');l.innerHTML='';
+  contas.forEach(function(c,i){
+    var p=c.lim?Math.min(100,c.uso/c.lim*100):0,d=document.createElement('div');d.className='conta';
+    d.innerHTML='<div class="em">'+esc(c.email)+'</div><div class="bar"><i style="width:'+p+'%;background:'+(p>90?'var(--bad)':'var(--ok)')+'"></i></div><div class="sub">'+fmt(c.uso)+' usados de '+(c.lim?fmt(c.lim)+' · livre '+fmt(c.lim-c.uso):'espaço ilimitado')+'</div>';
+    var a=document.createElement('div');a.className='acoes';
+    var b1=document.createElement('button');b1.className='sec';b1.textContent='Atualizar';b1.onclick=function(){conectar(c.email)};
+    var b2=document.createElement('button');b2.className='bad';b2.textContent='Remover';b2.onclick=function(){remover(i)};
+    a.append(b1,b2);d.append(a);l.append(d);
+  });
+  $('add').disabled=contas.length>=MAX;
+}
+async function appUso(){
+  try{var e=await navigator.storage.estimate();$('app').textContent='Espaço usado pelo Drive Livre neste aparelho: '+fmt(e.usage||0)+'.'}catch(x){$('app').textContent=''}
+}
+function abrir(){$('painel').classList.add('on');painel();appUso()}
+function fechar(){$('painel').classList.remove('on')}
+$('painel').onclick=function(e){if(e.target===this)fechar()};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){fechar();menu(false)}});
+
+/* ---------- Arquivos e grade ---------- */
+function tipo(f){
+  var n=f.name.toLowerCase();
+  if(f.type.indexOf('image/')===0)return'Fotos';
+  if(f.type.indexOf('video/')===0||/\.(mp4|mkv|mov|3gp|webm)$/.test(n))return'Vídeos';
+  return'Documentos';
+}
+var db=null,cur=null;
+function abrirDB(){return new Promise(function(ok,er){
+  var r=indexedDB.open('drivelivre',1);
+  r.onupgradeneeded=function(){r.result.createObjectStore('arq',{keyPath:'id',autoIncrement:true})};
+  r.onsuccess=function(){db=r.result;ok()};r.onerror=function(){er(r.error)};
+})}
+function tx(modo,fn){return new Promise(function(ok,er){
+  var t=db.transaction('arq',modo),q=fn(t.objectStore('arq'));
+  t.oncomplete=function(){ok(q&&q.result)};t.onerror=t.onabort=function(){er(t.error)};
+})}
+function doCat(c){return dados.filter(function(d){return c==='Importantes'?d.imp:d.c===c})}
+async function carregar(){
+  try{
+    await abrirDB();
+    var l=await tx('readonly',function(s){return s.getAll()});
+    dados=l.map(function(r){return{id:r.id,nome:r.nome,c:r.c,imp:!!r.imp,tam:r.tam,data:r.data,blob:r.blob,u:URL.createObjectURL(r.blob)}});
+  }catch(e){alert('Não foi possível abrir o armazenamento do app: '+(e&&e.message||e))}
+  try{navigator.storage.persist()}catch(e){}
+  desenhar();
+}
+async function add(fs){
+  var lista=Array.from(fs);
+  for(var i=0;i<lista.length;i++){
+    var f=lista[i];$('tit').textContent='Guardando '+(i+1)+' de '+lista.length+'…';
+    var r={nome:f.name,c:tipo(f),imp:false,tam:f.size,data:f.lastModified,blob:f};
+    try{r.id=await tx('readwrite',function(s){return s.add(r)})}
+    catch(e){alert('Não foi possível guardar "'+f.name+'". O espaço do celular pode ter acabado.');break}
+    r.u=URL.createObjectURL(f);dados.push(r);
+  }
+  $('f').value='';desenhar();
+}
+async function salvar(d){await tx('readwrite',function(s){return s.put({id:d.id,nome:d.nome,c:d.c,imp:d.imp,tam:d.tam,data:d.data,blob:d.blob})})}
+function ver(d){
+  cur=d;$('vn').textContent=d.nome;var m=$('vm');m.innerHTML='';
+  if(d.c==='Fotos'){var i=document.createElement('img');i.src=d.u;m.append(i)}
+  else if(d.c==='Vídeos'){var v=document.createElement('video');v.src=d.u;v.controls=true;v.autoplay=true;v.playsInline=true;m.append(v)}
+  else{m.innerHTML='<a class="lnk" href="'+d.u+'" download="'+esc(d.nome)+'">Abrir ou baixar '+esc(d.nome)+'</a>'}
+  $('bimp').textContent=d.imp?'⭐ Importante':'☆ Marcar importante';
+  var s=$('bcat');s.innerHTML='';
+  ['Documentos','Fotos','Vídeos'].forEach(function(c){var o=document.createElement('option');o.value=o.textContent=c;if(c===d.c)o.selected=true;s.append(o)});
+  $('vis').classList.add('on');
+}
+function vfechar(){$('vis').classList.remove('on');$('vm').innerHTML='';cur=null;desenhar()}
+async function vimp(){if(!cur)return;cur.imp=!cur.imp;await salvar(cur);$('bimp').textContent=cur.imp?'⭐ Importante':'☆ Marcar importante'}
+async function vmover(c){if(!cur)return;cur.c=c;await salvar(cur);ver(cur)}
+async function vdel(){
+  if(!cur||!confirm('Excluir "'+cur.nome+'" do Drive Livre? Isso apaga só a cópia guardada no app.'))return;
+  var id=cur.id;await tx('readwrite',function(s){return s.delete(id)});
+  URL.revokeObjectURL(cur.u);dados=dados.filter(function(d){return d.id!==id});vfechar();
+}
+var ic={'Documentos':'📄','Fotos':'🖼️','Vídeos':'🎬','Importantes':'⭐'};
+function menu(o){$('nav').classList.toggle('on',o);$('fundo').classList.toggle('on',o)}
+function zoom(d){z=Math.max(0,Math.min(2,z+d));desenhar()}
+function desenhar(){
+  var lista=doCat(cat),g=$('grid');
+  $('tit').textContent=cat+' ('+lista.length+')';
+  g.style.gridTemplateColumns='repeat('+cols[z]+',1fr)';g.innerHTML='';
+  if(!lista.length){g.innerHTML='<div class="vazio">'+(cat==='Importantes'?'Toque num arquivo e depois em ☆ para marcar como importante.':'Nada aqui ainda. Toque em 📂 e escolha os arquivos (segure um para selecionar vários).')+'</div>'}
+  lista.forEach(function(d){
+    var e=document.createElement('div');e.className='it';e.onclick=function(){ver(d)};
+    if(d.c==='Fotos'){e.innerHTML='<img loading="lazy" alt="" src="'+d.u+'">'}
+    else if(d.c==='Vídeos'){
+      var v=document.createElement('video');v.src=d.u+'#t=0.5';v.preload='metadata';v.muted=true;v.playsInline=true;
+      var b=document.createElement('span');b.className='dur';
+      v.onloadedmetadata=function(){var s=Math.round(v.duration);b.textContent='▶ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+      e.append(v,b);
+    }else{e.innerHTML='<div class="doc">'+esc(d.nome.split('.').pop().toUpperCase())+'</div>'}
+    g.append(e);
+  });
+  var n=$('nav');n.innerHTML='<div class="mt">Categorias</div>';
+  cats.forEach(function(c){
+    var q=doCat(c).length,b=document.createElement('button');
+    b.innerHTML='<span>'+ic[c]+' '+c+'</span><small>'+q+'</small>';
+    if(c===cat)b.className='on';
+    b.onclick=function(){cat=c;menu(false);desenhar()};
+    n.append(b);
+  });
+}
+</script>
+</body>
+</html>
