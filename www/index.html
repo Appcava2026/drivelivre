@@ -39,14 +39,26 @@ nav button small{color:var(--mut);font-size:14px}
 nav button.on{background:var(--line);color:#6db1ff}
 #vis{position:fixed;inset:0;background:#000;z-index:12;display:none;flex-direction:column}
 #vis.on{display:flex}
-.vtop,.vac{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px}
+.vtop,.vac{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px}
 .vtop{padding-top:calc(10px + env(safe-area-inset-top));word-break:break-all}
 .vac{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
 #vm{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
 #vm img,#vm video{max-width:100%;max-height:100%}
 .lnk{color:#6db1ff;padding:24px;text-align:center;word-break:break-all}
 .vac select{background:var(--line);color:#fff;border:0;border-radius:10px;padding:10px;font:inherit}
-.it{cursor:pointer}
+.it{cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.it.rs img{filter:blur(22px) brightness(.7);transform:scale(1.25)}
+.lk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;pointer-events:none}
+.it.sl{outline:3px solid var(--hi);outline-offset:-3px}
+.ck{position:absolute;right:4px;top:4px;background:var(--hi);color:#1b1300;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+#sb{position:fixed;left:0;right:0;bottom:0;z-index:7;display:none;gap:6px;align-items:center;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:var(--card);flex-wrap:wrap}
+#sb.on{display:flex}
+#sb b{flex:1;min-width:70px}
+#sen{position:fixed;inset:0;background:#000d;z-index:30;display:none;align-items:center;justify-content:center;padding:20px}
+#sen.on{display:flex}
+#sen>div{background:var(--card);border-radius:14px;padding:18px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
+#sen input{font-size:18px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+#sen .ln{display:flex;gap:8px;justify-content:flex-end}
 @media(prefers-reduced-motion:reduce){nav{transition:none}}
 #painel{position:fixed;inset:0;background:#000c;z-index:10;display:none;align-items:flex-end;justify-content:center}
 #painel.on{display:flex}
@@ -87,10 +99,12 @@ nav button.on{background:var(--line);color:#6db1ff}
 <div id="fundo" onclick="menu(false)"></div>
 <nav id="nav" aria-label="Categorias"></nav>
 
+<div id="sb"><b id="sn"></b><button class="sec" onclick="selTodos()">Todos</button><button onclick="selRest(true)">🔒</button><button class="sec" onclick="selRest(false)">🔓</button><button class="bad" onclick="selDel()">🗑</button><button class="sec" onclick="selFim()">✕</button></div>
+<div id="sen"><div><b id="st"></b><input id="si" type="password" autocomplete="off"><div class="ln"><button class="sec" id="sx">Cancelar</button><button id="so">OK</button></div><a id="se" href="#" style="color:#6db1ff;font-size:13px;display:none">Esqueci a senha</a></div></div>
 <div id="vis">
   <div class="vtop"><b id="vn"></b><button class="sec" onclick="vfechar()" aria-label="Fechar">✕</button></div>
   <div id="vm"></div>
-  <div class="vac"><button class="sec" id="bimp" onclick="vimp()"></button><select id="bcat" onchange="vmover(this.value)" aria-label="Categoria"></select><button class="bad" onclick="vdel()">Excluir do app</button></div>
+  <div class="vac"><button class="sec" id="bimp" onclick="vimp()"></button><button class="sec" id="brest" onclick="vrest()"></button><select id="bcat" onchange="vmover(this.value)" aria-label="Categoria"></select><button class="bad" onclick="vdel()">Excluir do app</button></div>
 </div>
 <div id="painel">
   <div class="sheet">
@@ -110,7 +124,7 @@ var $=function(i){return document.getElementById(i)};
 var L={g:function(k){try{return localStorage.getItem(k)}catch(e){return null}},s:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 var contas=[];try{contas=JSON.parse(L.g('dl_contas')||'[]')}catch(e){}
 var tokens={},cli=null;
-var cats=['Documentos','Fotos','Vídeos','Importantes'],cat='Fotos',cols=[3,5,9],z=1,dados=[];
+var cats=['Documentos','Fotos','Vídeos','Importantes','Restritos'],cat='Fotos',cols=[3,5,9],z=1,dados=[];
 
 /* ---------- PIN ---------- */
 $('msg').textContent=L.g('dl_pin')?'Digite seu PIN':'Crie um PIN de 4 a 6 números';
@@ -200,72 +214,179 @@ function tx(modo,fn){return new Promise(function(ok,er){
   var t=db.transaction('arq',modo),q=fn(t.objectStore('arq'));
   t.oncomplete=function(){ok(q&&q.result)};t.onerror=t.onabort=function(){er(t.error)};
 })}
-function doCat(c){return dados.filter(function(d){return c==='Importantes'?d.imp:d.c===c})}
+function doCat(c){return dados.filter(function(d){return c==='Importantes'?d.imp:c==='Restritos'?d.rest:d.c===c})}
 async function carregar(){
   try{
     await abrirDB();
     var l=await tx('readonly',function(s){return s.getAll()});
-    dados=l.map(function(r){return{id:r.id,nome:r.nome,c:r.c,imp:!!r.imp,tam:r.tam,data:r.data,blob:r.blob,u:URL.createObjectURL(r.blob)}});
+    dados=l.map(function(r){return{id:r.id,nome:r.nome,c:r.c,imp:!!r.imp,tam:r.tam,data:r.data,blob:r.blob,u:null}});
   }catch(e){alert('Não foi possível abrir o armazenamento do app: '+(e&&e.message||e))}
   try{navigator.storage.persist()}catch(e){}
+  await abrirMini();var ms=await mall(),mp={};
+  ms.forEach(function(x){mp[x.id]=x});
+  dados.forEach(function(d){var x=mp[d.id];if(x){d.th=x.th;d.dur=x.dur;d.rest=!!x.rest}});
   desenhar();
 }
 async function add(fs){
-  var lista=Array.from(fs);
+  var lista=Array.from(fs);if(!lista.length)return;
+  var tot=lista.reduce(function(a,f){return a+f.size},0);
+  if(tot>5e8&&!confirm('Isto vai COPIAR '+fmt(tot)+' para dentro do app e ocupar esse espaço no celular até você apagar os originais. Continuar?')){$('f').value='';return}
   for(var i=0;i<lista.length;i++){
     var f=lista[i];$('tit').textContent='Guardando '+(i+1)+' de '+lista.length+'…';
     var r={nome:f.name,c:tipo(f),imp:false,tam:f.size,data:f.lastModified,blob:f};
     try{r.id=await tx('readwrite',function(s){return s.add(r)})}
     catch(e){alert('Não foi possível guardar "'+f.name+'". O espaço do celular pode ter acabado.');break}
-    r.u=URL.createObjectURL(f);dados.push(r);
+    r.u=null;dados.push(r);await new Promise(function(r2){setTimeout(r2,0)});
   }
   $('f').value='';desenhar();
 }
 async function salvar(d){await tx('readwrite',function(s){return s.put({id:d.id,nome:d.nome,c:d.c,imp:d.imp,tam:d.tam,data:d.data,blob:d.blob})})}
 function ver(d){
   cur=d;$('vn').textContent=d.nome;var m=$('vm');m.innerHTML='';
-  if(d.c==='Fotos'){var i=document.createElement('img');i.src=d.u;m.append(i)}
-  else if(d.c==='Vídeos'){var v=document.createElement('video');v.src=d.u;v.controls=true;v.autoplay=true;v.playsInline=true;m.append(v)}
-  else{m.innerHTML='<a class="lnk" href="'+d.u+'" download="'+esc(d.nome)+'">Abrir ou baixar '+esc(d.nome)+'</a>'}
-  $('bimp').textContent=d.imp?'⭐ Importante':'☆ Marcar importante';
+  if(d.c==='Fotos'){var i=document.createElement('img');i.src=url(d);m.append(i)}
+  else if(d.c==='Vídeos'){var v=document.createElement('video');v.src=url(d);v.controls=true;v.autoplay=true;v.playsInline=true;m.append(v)}
+  else{m.innerHTML='<a class="lnk" href="'+url(d)+'" download="'+esc(d.nome)+'">Abrir ou baixar '+esc(d.nome)+'</a>'}
+  $('bimp').textContent=d.imp?'⭐ Importante':'☆ Marcar importante';$('brest').textContent=d.rest?'🔓 Liberar':'🔒 Restringir';
   var s=$('bcat');s.innerHTML='';
   ['Documentos','Fotos','Vídeos'].forEach(function(c){var o=document.createElement('option');o.value=o.textContent=c;if(c===d.c)o.selected=true;s.append(o)});
   $('vis').classList.add('on');
 }
 function vfechar(){$('vis').classList.remove('on');$('vm').innerHTML='';cur=null;desenhar()}
 async function vimp(){if(!cur)return;cur.imp=!cur.imp;await salvar(cur);$('bimp').textContent=cur.imp?'⭐ Importante':'☆ Marcar importante'}
+async function vrest(){if(!cur)return;if(!await senhaOk())return;cur.rest=!cur.rest;await msave(cur);ver(cur)}
 async function vmover(c){if(!cur)return;cur.c=c;await salvar(cur);ver(cur)}
 async function vdel(){
   if(!cur||!confirm('Excluir "'+cur.nome+'" do Drive Livre? Isso apaga só a cópia guardada no app.'))return;
   var id=cur.id;await tx('readwrite',function(s){return s.delete(id)});
-  URL.revokeObjectURL(cur.u);dados=dados.filter(function(d){return d.id!==id});vfechar();
+  if(cur.u)URL.revokeObjectURL(cur.u);dados=dados.filter(function(d){return d.id!==id});vfechar();
 }
-var ic={'Documentos':'📄','Fotos':'🖼️','Vídeos':'🎬','Importantes':'⭐'};
+var ic={'Documentos':'📄','Fotos':'🖼️','Vídeos':'🎬','Importantes':'⭐','Restritos':'🔒'};
 function menu(o){$('nav').classList.toggle('on',o);$('fundo').classList.toggle('on',o)}
 function zoom(d){z=Math.max(0,Math.min(2,z+d));desenhar()}
+function url(d){return d.u||(d.u=URL.createObjectURL(d.blob))}
+/* miniaturas: banco separado, fila de 2 por vez, só do que aparece na tela */
+var mdb=null,fila=[],ativos=0,obs=null,ob2=null;
+function abrirMini(){return new Promise(function(ok){var r=indexedDB.open('drivelivre-mini',1);r.onupgradeneeded=function(){r.result.createObjectStore('m',{keyPath:'id'})};r.onsuccess=function(){mdb=r.result;ok()};r.onerror=function(){ok()}})}
+function mput(o){return new Promise(function(ok){try{var t=mdb.transaction('m','readwrite');t.objectStore('m').put(o);t.oncomplete=t.onerror=t.onabort=function(){ok()}}catch(e){ok()}})}
+function msave(d){return mput({id:d.id,th:d.th,dur:d.dur,rest:!!d.rest})}
+function mlote(arr){return new Promise(function(ok){try{var t=mdb.transaction('m','readwrite'),st=t.objectStore('m');arr.forEach(function(d){st.put({id:d.id,th:d.th,dur:d.dur,rest:!!d.rest})});t.oncomplete=t.onerror=t.onabort=function(){ok()}}catch(e){ok()}})}
+function mall(){return new Promise(function(ok){try{var q=mdb.transaction('m').objectStore('m').getAll();q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok([])}}catch(e){ok([])}})}
+function mkthumb(d){
+  return new Promise(function(ok,er){
+    var S=200,c=document.createElement('canvas');c.width=c.height=S;var g=c.getContext('2d');
+    function fim(src,w,h,dur){var k=Math.max(S/w,S/h),dw=w*k,dh=h*k;g.drawImage(src,(S-dw)/2,(S-dh)/2,dw,dh);c.toBlob(function(b){b?ok({th:b,dur:dur||0}):er()},'image/jpeg',.6)}
+    if(d.c==='Vídeos'){
+      var v=document.createElement('video'),u=URL.createObjectURL(d.blob),fez=false;
+      var limpa=function(){try{v.removeAttribute('src');v.load()}catch(e){}URL.revokeObjectURL(u)};
+      v.muted=true;v.preload='auto';v.playsInline=true;
+      v.onloadedmetadata=function(){try{v.currentTime=Math.min(1,(v.duration||2)/10)}catch(e){}};
+      v.onseeked=function(){if(fez)return;fez=true;try{fim(v,v.videoWidth,v.videoHeight,v.duration);limpa()}catch(e){limpa();er(e)}};
+      v.onerror=function(){if(!fez){fez=true;limpa();er()}};
+      setTimeout(function(){if(!fez){fez=true;limpa();er()}},10000);
+      v.src=u;
+    }else{
+      createImageBitmap(d.blob,{resizeWidth:400}).then(function(b){fim(b,b.width,b.height);if(b.close)b.close()}).catch(er);
+    }
+  });
+}
+function rodar(){
+  while(ativos<2&&fila.length){
+    var t=fila.shift();ativos++;
+    pronto(t).then(function(){ativos--;rodar()});
+  }
+}
+async function pronto(t){
+  var d=t.d;
+  try{
+    if(!d.th){var r=await mkthumb(d);d.th=r.th;d.dur=r.dur;await msave(d)}
+    if(t.el.isConnected)mostra(t.el,d);
+  }catch(e){}
+}
+function mostra(el,d){
+  el.innerHTML='';var i=document.createElement('img');i.alt='';i.src=d.tu||(d.tu=URL.createObjectURL(d.th));el.append(i);el.classList.toggle('rs',!!d.rest);if(d.rest){var k=document.createElement('span');k.className='lk';k.textContent='🔒';el.append(k)}
+  if(d.c==='Vídeos'&&d.dur){var b=document.createElement('span');b.className='dur';var s=Math.round(d.dur);b.textContent='▶ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');el.append(b)}
+  if(el.classList.contains('sl'))marca(el,true);
+}
+var sel=null,lib=0;
+function tile(d){
+  var e=document.createElement('div');e.className='it';e._d=d;var lp=0;
+  e.onpointerdown=function(){lp=setTimeout(function(){lp=-1;alterna(d,e)},500)};
+  e.onpointerup=function(){if(lp>0)clearTimeout(lp)};
+  e.onpointercancel=e.onpointerleave=function(){if(lp>0){clearTimeout(lp);lp=0}};
+  e.oncontextmenu=function(ev){ev.preventDefault()};
+  e.onclick=function(){if(lp===-1){lp=0;return}if(sel)alterna(d,e);else abrir(d)};
+  if(d.c==='Documentos'){e.innerHTML='<div class="doc">'+(d.rest?'🔒':esc(d.nome.split('.').pop().toUpperCase()))+'</div>'}
+  else if(d.th){mostra(e,d)}
+  else{e.innerHTML='<div class="doc">'+(d.rest?'🔒':d.c==='Vídeos'?'🎬':'🖼️')+'</div>';obs.observe(e)}
+  if(sel&&sel[d.id])marca(e,true);
+  return e;
+}
+function marca(e,on){e.classList.toggle('sl',on);var c=e.querySelector('.ck');if(on&&!c){c=document.createElement('span');c.className='ck';c.textContent='✓';e.append(c)}else if(!on&&c)c.remove()}
+function alterna(d,e){if(!sel)sel={};if(sel[d.id])delete sel[d.id];else sel[d.id]=d;marca(e,!!sel[d.id]);sbar()}
+function sbar(){var n=sel?Object.keys(sel).length:0;if(!n)sel=null;$('sb').classList.toggle('on',n>0);$('sn').textContent=n+' selecionado(s)'}
+function selTodos(){sel={};doCat(cat).forEach(function(d){sel[d.id]=d});document.querySelectorAll('.it').forEach(function(e){if(e._d)marca(e,true)});sbar()}
+function selFim(){sel=null;document.querySelectorAll('.it.sl').forEach(function(e){marca(e,false)});sbar()}
+async function selRest(on){
+  if(!sel||!await senhaOk())return;
+  var a=Object.values(sel);a.forEach(function(d){d.rest=on});
+  await mlote(a);selFim();desenhar();
+}
+async function selDel(){
+  if(!sel)return;var a=Object.values(sel);
+  if(a.some(function(d){return d.rest})&&!await senhaOk())return;
+  if(!confirm('Excluir '+a.length+' arquivo(s) do Drive Livre? Isso apaga só as cópias guardadas no app.'))return;
+  await tx('readwrite',function(st){a.forEach(function(d){st.delete(d.id)})});
+  var ids={};a.forEach(function(d){ids[d.id]=1;if(d.u)URL.revokeObjectURL(d.u)});
+  dados=dados.filter(function(d){return !ids[d.id]});selFim();desenhar();
+}
+async function abrir(d){if(d.rest&&!await senhaOk())return;ver(d)}
+function pedir(t,esq){return new Promise(function(ok){
+  $('st').textContent=t;var i=$('si');i.value='';$('se').style.display=esq?'block':'none';$('sen').classList.add('on');i.focus();
+  var fim=function(v){$('sen').classList.remove('on');ok(v)};
+  $('so').onclick=function(){fim(i.value)};$('sx').onclick=function(){fim(null)};
+  i.onkeydown=function(e){if(e.key==='Enter')fim(i.value)};
+  $('se').onclick=function(e){e.preventDefault();fim('\u0000esqueci')};
+})}
+async function senhaOk(){
+  var h0=L.g('dl_srest');
+  if(h0&&lib&&Date.now()-lib<300000){lib=Date.now();return true}
+  if(h0){
+    var x=await pedir('Senha dos arquivos restritos',true);
+    if(!x)return false;
+    if(x==='\u0000esqueci'){
+      var pn=await pedir('Digite o PIN do app para criar uma nova senha');
+      if(!pn||await h(pn)!==L.g('dl_pin')){alert('PIN incorreto.');return false}
+    }else{if(await h(x)!==h0){alert('Senha incorreta.');return false}lib=Date.now();return true}
+  }
+  var n1=await pedir('Crie a senha dos arquivos restritos (mínimo 4 caracteres)');
+  if(!n1||n1.length<4)return false;
+  var n2=await pedir('Repita a senha');
+  if(n2!==n1){alert('As senhas não conferem.');return false}
+  L.s('dl_srest',await h(n1));lib=Date.now();return true;
+}
+document.addEventListener('visibilitychange',function(){if(document.hidden)lib=0});
 function desenhar(){
   var lista=doCat(cat),g=$('grid');
   $('tit').textContent=cat+' ('+lista.length+')';
   g.style.gridTemplateColumns='repeat('+cols[z]+',1fr)';g.innerHTML='';
-  if(!lista.length){g.innerHTML='<div class="vazio">'+(cat==='Importantes'?'Toque num arquivo e depois em ☆ para marcar como importante.':'Nada aqui ainda. Toque em 📂 e escolha os arquivos (segure um para selecionar vários).')+'</div>'}
-  lista.forEach(function(d){
-    var e=document.createElement('div');e.className='it';e.onclick=function(){ver(d)};
-    if(d.c==='Fotos'){e.innerHTML='<img loading="lazy" alt="" src="'+d.u+'">'}
-    else if(d.c==='Vídeos'){
-      var v=document.createElement('video');v.src=d.u+'#t=0.5';v.preload='metadata';v.muted=true;v.playsInline=true;
-      var b=document.createElement('span');b.className='dur';
-      v.onloadedmetadata=function(){var s=Math.round(v.duration);b.textContent='▶ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
-      e.append(v,b);
-    }else{e.innerHTML='<div class="doc">'+esc(d.nome.split('.').pop().toUpperCase())+'</div>'}
-    g.append(e);
-  });
-  var n=$('nav');n.innerHTML='<div class="mt">Categorias</div>';
+  if(obs)obs.disconnect();if(ob2)ob2.disconnect();fila=[];
+  obs=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){obs.unobserve(x.target);fila.push({d:x.target._d,el:x.target});rodar()}})},{rootMargin:'300px'});
+  var n=0,P=120;
+  function mais(){
+    var fim=Math.min(lista.length,n+P);
+    for(;n<fim;n++)g.append(tile(lista[n]));
+    if(n<lista.length){var st=document.createElement('div');st.className='vazio';st.textContent='Carregando mais…';g.append(st);ob2.observe(st)}
+  }
+  ob2=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){ob2.disconnect();x.target.remove();mais()}})},{rootMargin:'600px'});
+  if(!lista.length){g.innerHTML='<div class="vazio">'+(cat==='Importantes'?'Toque num arquivo e depois em ☆ para marcar como importante.':cat==='Restritos'?'Nenhum arquivo restrito. Segure um arquivo e toque em 🔒.':'Nada aqui ainda. Toque em 📂 e escolha os arquivos (segure um para selecionar vários).')+'</div>'}
+  else mais();
+  var nv=$('nav');nv.innerHTML='<div class="mt">Categorias</div>';
   cats.forEach(function(c){
     var q=doCat(c).length,b=document.createElement('button');
     b.innerHTML='<span>'+ic[c]+' '+c+'</span><small>'+q+'</small>';
     if(c===cat)b.className='on';
     b.onclick=function(){cat=c;menu(false);desenhar()};
-    n.append(b);
+    nv.append(b);
   });
 }
 </script>
